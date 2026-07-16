@@ -1,77 +1,111 @@
 # ParityKit
 
-A minimal, markdown-and-graph-native framework for catching parity failures and regression blind spots in legacy modernization work — built to run inside GitHub Copilot. Two agent personas, a knowledge graph as the shared context, and an evidence-based confidence score, all pointed at one job: don't let AI-assisted transformation claim confidence it can't prove.
+An agent + skills framework for evaluating AI-generated artifacts in legacy modernization work. One orchestrating agent reads an artifact under test, runs it through a versioned skills library, and generates a test report with a transparent, evidence-based confidence score — precision, recall, accuracy, and F1 included, never a bare number.
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    A[Legacy Source] --> B[Rule Extraction]
-    B --> C[(Knowledge Graph<br/>TTL in git, synced to Neo4j)]
-    C --> D[Context Assembly<br/>subgraph query]
-    D --> E[AI Transformation]
-    E --> F[Heuristic Check]
-    F -->|fail| B
-    F -->|pass| G[Normalize]
-    G --> H[Dual Comparison<br/>golden dataset + rule engine]
-    H --> C
-    H --> I[Evaluation Log]
-    I --> J[Confidence Score<br/>precision / recall / F1]
-    J --> K{Human Sign-off}
-    K -->|Approved| L[Cutover]
-    K -->|Remediate| B
+flowchart TD
+    A[input/artifacts/module] --> B["Phase 1 — Read Input:<br/>query knowledge graph for the rule"]
+    B -->|missing/stale| STOP1[Report gap, stop]
+    B -->|found| C["Phase 2 — Execute Process"]
+    C --> D[skills/heuristic-validation]
+    D -->|block fail| STOP2[Report failure, stop]
+    D -->|pass| E[skills/parity-evaluation<br/>normalize + dual compare]
+    E --> F[skills/ai-semantic-validation<br/>blind logic read]
+    F --> G[skills/knowledge-graph-builder<br/>write evidence back]
+    G --> H[skills/confidence-scoring<br/>six components + overrides]
+    H --> I["Phase 3 — Generate Output"]
+    I --> J[output/reports/module-date.md]
+    I --> K[output/evaluation-log.md]
+    K --> L{Human Sign-off}
+    L -->|Approved| M[Cutover]
+    L -->|Remediate| B
 ```
 
-Two independent oracles feed the dual comparison, not one: the **golden dataset** (empirical — real historical legacy output) and the **rule engine** (analytical — an independently maintained, deterministic re-implementation of the same business rule). Agreement between both and the AI-generated output is strong evidence. Disagreement between the two oracles is itself a finding, not a tie the AI's output gets to silently win.
+Two independent oracles feed `parity-evaluation`: the **golden dataset** (empirical) and the **rule-engine implementation** (analytical, independently maintained). `ai-semantic-validation` then checks something neither oracle can: whether the artifact's actual *logic*, read independently and blind, matches the documented rule — because a numeric match proves agreement on the cases tested, not that the rule was actually implemented.
 
-## The four things this framework enforces
+## Skills library
 
-1. **Context check.** No module gets assessed until the relevant knowledge-graph nodes are confirmed present and fresh — queried from Neo4j, sourced from `knowledge-graph.ttl` in git.
-2. **Rule-based validation before comparison.** A cheap, deterministic heuristic check runs first and can stop the pipeline outright. Only normalized output — rounding, dates, encoding, field order all canonicalized — ever reaches the comparison stage, so formatting noise never gets mistaken for a defect.
-3. **Confidence score, five components, always shown with its breakdown.** Context completeness, parity F1, blind-spot coverage, a standalone recall floor, and review status. One critical gap caps the whole score at Low, regardless of the average.
-4. **Evaluation pipeline.** Every run — heuristic check, comparison, blind-spot scan, confidence score — writes back into the graph and into `evaluation-log.md`, the append-only audit trail a human reviewer signs off against.
+Each skill is a folder with a versioned `SKILL.md` (frontmatter contract + procedure) and a `REFERENCE.md` (pattern catalogs, formulas, worked examples — loaded only when the skill runs, kept out of routine context). See `SKILLS_CHANGELOG.md` for full version history.
 
-## Why precision and recall, not just a match rate
-
-Precision is cheap to inflate: flag less, and precision goes up while real defects slide through unflagged. Recall is what actually costs effort to earn, and it's the number a demo will never volunteer — a high-recall check finds more of its own problems, which looks worse in a walkthrough than a system that simply stopped looking. So the rubric scores them separately: a **Recall Floor** component exists specifically so a good precision number can't quietly buy a passing confidence band on a module that's barely been checked. Any rule with no heuristic check, no rule-engine oracle, and no parity check contributes **zero** to recall — not "unknown," zero.
+| Skill | Version | Does |
+|---|---|---|
+| `legacy-rule-extraction` | 1.1.0 | Rule-based regex parsing of legacy source into draft rule candidates |
+| `knowledge-graph-builder` | 1.3.0 | The only skill that writes to the graph — TTL in git, synced to Neo4j |
+| `heuristic-validation` | 1.0.0 | Cheap deterministic sanity checks, run first, can halt the pipeline |
+| `ai-semantic-validation` | 1.0.0 | Independent AI read of the artifact's logic, cross-checked against the rule and the parity result |
+| `parity-evaluation` | 1.2.0 | Normalize, then dual-compare against both oracles; computes precision/recall/accuracy/F1 |
+| `confidence-scoring` | 1.1.0 | Six-component weighted score with hard overrides |
 
 ## Folder structure
 
 ```
 .github/
-  copilot-instructions.md          # loaded on every request — short, points to everything else
+  copilot-instructions.md
   chatmodes/
-    parity-auditor.chatmode.md     # runs heuristic → normalize → dual-compare, scores confidence
-    blindspot-scout.chatmode.md    # finds uncovered nodes, reports recall exposure
+    parity-auditor.chatmode.md      # orchestrator: read input -> execute process -> generate output
+    blindspot-scout.chatmode.md     # coverage/recall exposure across a scope
   prompts/
-    run-parity-check.prompt.md     # the full three-stage pipeline, end to end
+    run-full-evaluation.prompt.md
     scan-blindspots.prompt.md
     score-confidence.prompt.md
   instructions/
-    migration-context.instructions.md   # scoped to src/migration/**
-parity/
-  knowledge-graph.ttl               # source of truth — rules, oracles, evidence links, in git
-  neo4j/
-    import.cypher                   # loads the TTL into Neo4j via neosemantics (n10s)
-    queries.cypher                  # blind-spot, staleness, context-assembly, precision/recall queries
-  normalization-rules.md            # canonicalization applied before any comparison
-  rules-engine/                     # independent, deterministic re-implementations — the second oracle
-  golden-datasets/                  # historical production data, one set per module
-  checklists/
-    parity-checklist.md             # pass criteria + five-component confidence rubric
-    regression-blindspot-checklist.md
-  evaluation-log.md                 # audit trail, append-only
+    migration-context.instructions.md
+skills/
+  legacy-rule-extraction/{SKILL.md, REFERENCE.md}
+  knowledge-graph-builder/{SKILL.md, REFERENCE.md}
+  heuristic-validation/{SKILL.md, REFERENCE.md}
+  ai-semantic-validation/{SKILL.md, REFERENCE.md}
+  parity-evaluation/{SKILL.md, REFERENCE.md}
+  confidence-scoring/{SKILL.md, REFERENCE.md}
+input/
+  README.md
+  artifacts/{module}/            # <- drop the artifact under test here
+output/
+  README.md
+  reports/{module}-{date}.md     # <- generated test reports
+  evaluation-log.md              # <- append-only audit trail
+context/
+  knowledge-graph.ttl            # source of truth, git-tracked
+  normalization-rules.md
+  neo4j/{schema,import,queries}.cypher
+  golden-datasets/
+  rules-engine/
+  legacy-source/
+checklists/
+  parity-checklist.md
+  regression-blindspot-checklist.md
+BEST_PRACTICES.md
+SKILLS_CHANGELOG.md
+VERSION
 ```
+
+## The confidence score
+
+Six components, always shown with their breakdown — never a bare number:
+
+| Component | Weight |
+|---|---|
+| Context Completeness | 15% |
+| Parity F1 | 25% |
+| Semantic Agreement | 20% |
+| Blind-Spot Coverage | 20% |
+| Recall Floor | 10% |
+| Review Status | 10% |
+
+Four conditions cap the score at Low regardless of the weighted total — missing context, zero blind-spot coverage on a financial rule, zero recall, or a flagged **coincidental match risk**. That last one is the framework's central guarantee: a 100% parity match rate is never sufficient evidence on its own. Full rationale in `skills/confidence-scoring/REFERENCE.md`.
 
 ## Quickstart
 
-1. Copy this folder into your repo. The chat modes appear in Copilot's mode dropdown once `.github/chatmodes/` exists.
-2. Populate `parity/knowledge-graph.ttl` with your first extracted business rules before transforming any code — the graph comes first, not after. Load it into Neo4j with `parity/neo4j/import.cypher`.
-3. For each rule, write both a golden dataset (`parity/golden-datasets/`) and, where the rule is well-understood enough, a deterministic rule-engine implementation (`parity/rules-engine/`) — a rule with only one oracle is weaker evidence than a rule with two.
-4. Switch to **Parity Auditor** mode and run `*run-parity {module}` — it walks heuristic check → normalize → dual comparison automatically and logs precision/recall/F1.
-5. Switch to **Blind-Spot Scout** mode and run `*scan-blindspots {scope}`, even on modules that just passed — passing and covered are different claims — and check the recall exposure figure it reports.
-6. Check `parity/evaluation-log.md` before any sign-off conversation. If it's not in the log, it wasn't evaluated.
+1. Copy this folder into your repo — chat modes appear in Copilot's mode dropdown once `.github/chatmodes/` exists.
+2. Populate `context/knowledge-graph.ttl` with your first human-confirmed rules (via `legacy-rule-extraction` + manual review), load into Neo4j with `context/neo4j/schema.cypher` then `import.cypher`.
+3. Add a golden dataset and, where a rule is well-understood, a rule-engine implementation under `context/`. A rule with only one oracle is weaker evidence than one with two — the framework will say so.
+4. Drop the artifact under test into `input/artifacts/{module}/`.
+5. Run `*run-full-evaluation {module}` — the Parity Auditor walks all three phases and every skill automatically.
+6. Check `output/reports/` for the full report and `output/evaluation-log.md` before any sign-off conversation.
+7. Periodically run `*scan-blindspots {scope}` in Blind-Spot Scout mode — even on modules that just passed. Passing and covered are different claims.
 
 ## What this is deliberately not
 
-Not a scoring model, not an ML classifier, not an autonomous approver. The confidence score is arithmetic over evidence a human can re-run themselves as a Cypher query. Sign-off authority stays with a named human owner at every tier above Low risk. The framework's only job is to make sure a claim of "reliable" has a paper trail behind it, and to make silence — missing checks, missing oracles, missing context — visible instead of invisible.
+Not a scoring model, not an ML classifier, not an autonomous approver. Every number in the confidence score is arithmetic over evidence a human can re-run as a Cypher query. Sign-off authority stays with a named human owner at every tier above Low risk. Read `BEST_PRACTICES.md` before modifying any skill or agent file — it documents the design decisions (single writer to the graph, fail-closed defaults, why semantic validation is mandatory) that keep this framework honest as it grows.

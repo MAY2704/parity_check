@@ -2,15 +2,23 @@
 
 This repo is a legacy-to-target modernization effort. The governing rule for any AI-assisted change, review, or claim in this repo:
 
-**Parity before fluency. No confidence claim without logged evidence.**
+**Parity before fluency. No confidence claim without logged evidence — and a numeric match is never sufficient on its own.**
 
-Before generating, transforming, or approving anything in a migrated module:
+## Where things live
 
-1. Query the knowledge graph (`parity/knowledge-graph.ttl`, synced into Neo4j — see `parity/neo4j/queries.cypher`) for the business rules relevant to the module. If the relevant nodes are missing, stale, or unclear, say so — do not infer or guess the rule from raw legacy code.
-2. Any parity claim must have gone through all three validation stages — heuristic check, normalization, dual comparison against both the golden dataset and the rule-engine oracle (`parity/rules-engine/`) — not a partial run.
-3. Do not mark anything "correct," "safe," or "ready" without a corresponding entry in `parity/evaluation-log.md`, including precision, recall, and F1 — not just a match rate.
-4. Use the **Parity Auditor** chat mode (`.github/chatmodes/parity-auditor.chatmode.md`) to validate a module.
-5. Use the **Blind-Spot Scout** chat mode (`.github/chatmodes/blindspot-scout.chatmode.md`) to find what is *not* being checked, and to report recall exposure — this is a separate question from whether existing checks pass.
-6. Every confidence score must be traceable to the five-component rubric in `parity/checklists/parity-checklist.md` — never state a confidence level without showing the components behind it.
+- `input/artifacts/` — drop an artifact under test here. Nowhere else.
+- `output/reports/` + `output/evaluation-log.md` — every generated report and the append-only audit trail. Nothing else writes here.
+- `context/` — the knowledge graph (`knowledge-graph.ttl`, synced to Neo4j), golden datasets, rule-engine implementations, legacy source. Trusted and change-controlled separately from `input/`.
+- `skills/` — the reusable capability library (rule-based extraction, graph building, heuristic validation, AI semantic validation, parity evaluation, confidence scoring). Each skill is independently versioned — see `SKILLS_CHANGELOG.md`.
+- `.github/chatmodes/` — the two agent personas that orchestrate the skills: **Parity Auditor** (per-module evaluation) and **Blind-Spot Scout** (coverage/recall exposure across a scope).
+- `BEST_PRACTICES.md` — the operating principles behind this setup; read before modifying any skill or agent file.
 
-Scoped rules for specific paths live under `.github/instructions/`. Reusable, repeatable tasks live under `.github/prompts/`. This file is the only thing loaded on every request — keep it short on purpose; everything else is pulled in only when relevant, to keep context small and current.
+## Before generating, transforming, or approving anything in a migrated module
+
+1. Query the knowledge graph for the relevant `BusinessRule` node. If missing, stale, or unclear, say so — never infer or guess the rule from raw legacy code.
+2. A parity claim requires all three pipeline stages: heuristic check → normalization → dual comparison against both the golden dataset and the rule-engine oracle.
+3. A numeric match, on its own, is not evidence of correctness — `ai-semantic-validation` must confirm the artifact's actual logic matches the documented rule before a module is eligible for a High confidence band.
+4. Do not mark anything "correct," "safe," or "ready" without a corresponding entry in `output/evaluation-log.md`, including precision, recall, accuracy, and F1 — not just a match percentage.
+5. Every confidence score must show all six rubric components — never a bare number. See `skills/confidence-scoring/REFERENCE.md`.
+
+This file is the only thing loaded on every request — kept short on purpose. Skill depth lives in each skill's `REFERENCE.md`, loaded only when that skill actually runs.

@@ -13,9 +13,15 @@
 #                            golden dataset (two disagreeing oracles is itself
 #                            a finding, not just a tie-breaker problem)
 # mig:ParityCheck          — result of comparing AI-generated output against
-#                            the golden dataset AND/OR the rule-engine oracle
-# mig:hasPrecision / mig:hasRecall / mig:hasF1 — computed per module, per
-#                            evaluation cycle, not per single run
+#                            the golden dataset AND/OR the rule-engine oracle.
+#                            Carries hasPrecision / hasRecall / hasAccuracy / hasF1.
+# mig:AISemanticCheck      — result of an independent AI reading of the
+#                            artifact's actual logic, compared against this
+#                            rule's description and against the ParityCheck
+#                            result. agreementLevel: aligned / partially-aligned
+#                            / contradicts. coincidentalMatchRisk: true when a
+#                            high match rate coexists with low semantic agreement
+#                            — this is what a numeric diff alone cannot catch.
 # ---------------------------------------------------------------------------
 
 rule:RULE-0001 a mig:BusinessRule ;
@@ -27,7 +33,8 @@ rule:RULE-0001 a mig:BusinessRule ;
     mig:hasRuleEngineImpl   rule:RENG-0001 ;
     mig:hasTest              rule:TEST-0001 ;
     mig:hasParityCheck       rule:PCHK-0001 ;
-    mig:lastVerified          "2026-07-01"^^xsd:date ;
+    mig:hasAISemanticCheck    rule:ASEM-0001 ;
+    mig:lastVerified          "2026-07-16"^^xsd:date ;
     mig:status                 "Verified" .
 
 rule:RULE-0002 a mig:BusinessRule ;
@@ -36,7 +43,7 @@ rule:RULE-0002 a mig:BusinessRule ;
     mig:targetComponent     "fee-waiver.rules.ts" ;
     mig:tolerance            "0"^^xsd:decimal ;
     mig:status                "BlindSpot" .
-    # no HeuristicCheck, no RuleEngineImpl, no ParityCheck linked —
+    # no HeuristicCheck, no RuleEngineImpl, no ParityCheck, no AISemanticCheck —
     # this rule has undefined recall: nothing has ever been checked against it
 
 rule:HCHK-0001 a mig:HeuristicCheck ;
@@ -45,7 +52,7 @@ rule:HCHK-0001 a mig:HeuristicCheck ;
     mig:severity           "block" .
 
 rule:RENG-0001 a mig:RuleEngineImpl ;
-    mig:implementationRef  "rules-engine/interest-accrual.rules.yaml" ;
+    mig:implementationRef  "context/rules-engine/interest-accrual.rules.yaml" ;
     mig:deterministic         true .
 
 rule:PCHK-0001 a mig:ParityCheck ;
@@ -54,5 +61,12 @@ rule:PCHK-0001 a mig:ParityCheck ;
     mig:discrepancyCount       0 ;
     mig:hasPrecision            "1.0"^^xsd:decimal ;
     mig:hasRecall                "0.92"^^xsd:decimal ;
-    mig:hasF1                     "0.96"^^xsd:decimal ;
-    mig:executedOn                 "2026-07-14"^^xsd:date .
+    mig:hasAccuracy               "0.97"^^xsd:decimal ;
+    mig:hasF1                      "0.96"^^xsd:decimal ;
+    mig:executedOn                  "2026-07-16"^^xsd:date .
+
+rule:ASEM-0001 a mig:AISemanticCheck ;
+    mig:independentDescription "Computes accrued interest as principal times rate times a 30/360 day-count fraction, applied per posting cycle" ;
+    mig:agreementLevel          "aligned" ;
+    mig:coincidentalMatchRisk    false ;
+    mig:executedOn                 "2026-07-16"^^xsd:date .
