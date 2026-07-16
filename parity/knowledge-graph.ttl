@@ -1,0 +1,58 @@
+@prefix mig:  <http://example.org/migration/ontology#> .
+@prefix rule: <http://example.org/migration/rule#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------------------------------------------------------------------------
+# Ontology notes
+#
+# mig:BusinessRule        — a single extracted legacy business rule
+# mig:HeuristicCheck       — a cheap, deterministic sanity check derived from
+#                            the rule (range, sign, sum-to-total, calendar validity)
+# mig:RuleEngineImpl       — an independent, deterministic re-implementation of
+#                            the rule, used as a second oracle alongside the
+#                            golden dataset (two disagreeing oracles is itself
+#                            a finding, not just a tie-breaker problem)
+# mig:ParityCheck          — result of comparing AI-generated output against
+#                            the golden dataset AND/OR the rule-engine oracle
+# mig:hasPrecision / mig:hasRecall / mig:hasF1 — computed per module, per
+#                            evaluation cycle, not per single run
+# ---------------------------------------------------------------------------
+
+rule:RULE-0001 a mig:BusinessRule ;
+    mig:description       "Daily interest accrual, simple interest, 30/360 convention" ;
+    mig:sourceModule       "INTCALC.CBL:210" ;
+    mig:targetComponent    "interest-accrual.service.ts" ;
+    mig:tolerance           "0.005"^^xsd:decimal ;
+    mig:hasHeuristicCheck   rule:HCHK-0001 ;
+    mig:hasRuleEngineImpl   rule:RENG-0001 ;
+    mig:hasTest              rule:TEST-0001 ;
+    mig:hasParityCheck       rule:PCHK-0001 ;
+    mig:lastVerified          "2026-07-01"^^xsd:date ;
+    mig:status                 "Verified" .
+
+rule:RULE-0002 a mig:BusinessRule ;
+    mig:description        "Overdraft fee waiver after 90 consecutive days above balance threshold" ;
+    mig:sourceModule        "FEEWAIV.CBL:88" ;
+    mig:targetComponent     "fee-waiver.rules.ts" ;
+    mig:tolerance            "0"^^xsd:decimal ;
+    mig:status                "BlindSpot" .
+    # no HeuristicCheck, no RuleEngineImpl, no ParityCheck linked —
+    # this rule has undefined recall: nothing has ever been checked against it
+
+rule:HCHK-0001 a mig:HeuristicCheck ;
+    mig:heuristicType    "range" ;
+    mig:heuristicRule    "accrued_interest >= 0 AND accrued_interest <= principal * 0.15" ;
+    mig:severity           "block" .
+
+rule:RENG-0001 a mig:RuleEngineImpl ;
+    mig:implementationRef  "rules-engine/interest-accrual.rules.yaml" ;
+    mig:deterministic         true .
+
+rule:PCHK-0001 a mig:ParityCheck ;
+    mig:comparedAgainst      "golden-dataset", "rule-engine" ;
+    mig:matchRate              "1.0"^^xsd:decimal ;
+    mig:discrepancyCount       0 ;
+    mig:hasPrecision            "1.0"^^xsd:decimal ;
+    mig:hasRecall                "0.92"^^xsd:decimal ;
+    mig:hasF1                     "0.96"^^xsd:decimal ;
+    mig:executedOn                 "2026-07-14"^^xsd:date .
