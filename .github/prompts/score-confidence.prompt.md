@@ -1,6 +1,5 @@
 ---
 description: 'Compute the six-component confidence score for a module from logged evidence, via the confidence-scoring skill.'
-mode: agent
 ---
 
 Run the `confidence-scoring` skill for `${input:module}`.

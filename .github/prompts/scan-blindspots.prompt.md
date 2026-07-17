@@ -1,6 +1,6 @@
 ---
 description: 'Scan a scope of the knowledge graph for regression blind spots and report recall exposure — nodes missing a heuristic check, rule-engine oracle, or parity check.'
-mode: agent
+
 ---
 
 Scan `${input:scope}` for regression blind spots.

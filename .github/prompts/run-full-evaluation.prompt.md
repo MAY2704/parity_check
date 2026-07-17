@@ -1,6 +1,6 @@
 ---
 description: 'Run the full three-phase evaluation pipeline (read input, execute process, generate output) for one artifact under test.'
-mode: agent
+
 ---
 
 Evaluate `${input:module}` end to end.
