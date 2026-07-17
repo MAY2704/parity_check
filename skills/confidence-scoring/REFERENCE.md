@@ -30,6 +30,10 @@
 
 The last override is the one most worth remembering: **a 100% parity match rate is not sufficient evidence on its own, ever, in this framework.** It's necessary, not sufficient — semantic agreement is what turns a numeric match into a claim about correctness.
 
+## Self-reported confidence is a downgrade-only input
+
+`ai-semantic-validation`'s message carries `confidence.source: "self-reported"` — the skill's own certainty in its blind read, not a formula over external evidence. This framework never lets that value push a score up. A high self-reported confidence attached to `agreement_level: aligned` earns exactly the 100 points the Semantic Agreement component already assigns for "aligned," no bonus on top. A *low* self-reported confidence attached to `contradicts` or `coincidentalMatchRisk: true` still triggers the full downgrade and the override — the skill being unsure of its own reading is not a reason to discount a red flag it raised. See `skills/SKILL_MESSAGES.md` for the general rule this follows across the framework.
+
 ## Versioning note for this skill
 
 - **PATCH** — a corrected weight typo, a clarified band boundary.

@@ -26,4 +26,4 @@ The Parity Auditor tells you whether known behavior matches, module by module. Y
 
 - `context/knowledge-graph.ttl` + `context/neo4j/queries.cypher`
 - `checklists/regression-blindspot-checklist.md`
-- `skills/knowledge-graph-builder` (^1.3.0), `skills/confidence-scoring` (^1.1.0)
+- `skills/knowledge-graph-builder` (^2.0.0), `skills/confidence-scoring` (^2.0.0)

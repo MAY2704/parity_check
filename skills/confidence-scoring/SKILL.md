@@ -1,23 +1,24 @@
 ---
 name: confidence-scoring
-version: 1.1.0
+version: 2.0.0
 description: >
-  Aggregates evidence from every other skill into a single, transparent
-  confidence score with a visible component breakdown — never a bare
-  number. Trigger as the final step before writing a report, once
+  Aggregates evidence from every other skill's JSON message into a single,
+  transparent confidence score with a visible component breakdown — never a
+  bare number. Enforces the propagation rule: self-reported confidence
+  (from ai-semantic-validation) may only lower the composite, never raise
+  it. Trigger as the final step before writing a report, once
   heuristic-validation, parity-evaluation, and ai-semantic-validation have
   all produced results for the module.
 inputs:
-  - context_completeness (from knowledge-graph-builder / graph query)
-  - parity_result (from parity-evaluation: precision, recall, accuracy, F1)
-  - semantic_result (from ai-semantic-validation: agreement_level, coincidental_match_risk)
-  - blind_spot_coverage (from a graph query for linked evidence nodes)
+  - JSON messages (per context/schemas/skill-message.schema.json) from
+    heuristic-validation, parity-evaluation, ai-semantic-validation, and
+    knowledge-graph-builder for this module
   - review_status (from output/evaluation-log.md)
 depends_on: [parity-evaluation, ai-semantic-validation, knowledge-graph-builder]
 outputs:
-  - composite_score: 0-100
-  - band: High / Medium / Low
-  - component_breakdown: all six components shown individually
+  - JSON message per context/schemas/skill-message.schema.json, with
+    result.component_breakdown showing all six components individually
+output_schema: ../../context/schemas/skill-message.schema.json
 reference: REFERENCE.md
 ---
 
@@ -29,14 +30,49 @@ Arithmetic over evidence, not a model and not a judgment call. Every input to th
 
 ## Procedure
 
-1. Pull the five raw inputs from their source skills' most recent logged output for the module — never estimate a component that has no logged evidence behind it.
-2. Apply the weights in `REFERENCE.md` to compute the weighted composite.
-3. **Check override conditions before finalizing.** Any of the following caps the composite at the Low band regardless of the weighted total:
+1. Pull the JSON message most recently logged for the module from each source skill — never estimate a component with no logged message behind it.
+2. Apply the weights in `REFERENCE.md` to compute the weighted composite from each message's `result` fields.
+3. **Enforce the propagation rule.** `ai-semantic-validation`'s message has `confidence.source: "self-reported"`. If its `agreement_level` is `aligned`, do not add score beyond what the Semantic Agreement component already awards for that classification — a high self-reported confidence value does not add bonus weight on top. If `agreement_level` is `partially-aligned` or `contradicts`, or `coincidentalMatchRisk` is true, apply the full downgrade the rubric specifies, regardless of the self-reported confidence value attached to that finding — a *low-confidence* bad finding still triggers the override, because the finding itself, not the skill's certainty about it, is what matters here.
+4. **Check override conditions before finalizing.** Any of the following caps the composite at the Low band regardless of the weighted total:
    - Context Completeness = 0
    - Blind-Spot Coverage = 0 on a financial or regulatory-reporting rule
    - Recall Floor = 0
    - `ai-semantic-validation` reported `coincidental_match_risk: true`, **even if parity accuracy is 100%**
-4. Report all six components individually, the override applied (if any), the composite, and the band. Never output a single number with no breakdown.
-5. Hand off to the reporting step (see the agent's `run-full-evaluation` prompt) to write the score into `output/reports/`.
+5. Report all six components individually, the override applied (if any), the composite, and the band, as a JSON message per the schema, plus a human-readable rendering for the report. Never output a single number with no breakdown.
+6. Hand off to the reporting step (see the agent's `run-full-evaluation` prompt) to write the score into `output/reports/`.
+
+## Output message
+
+```json
+{
+  "skill": "confidence-scoring",
+  "skill_version": "2.0.0",
+  "module": "interest-accrual",
+  "run_id": "run-2026-07-17T09:41:00Z-interest-accrual",
+  "timestamp": "2026-07-17T09:45:00Z",
+  "status": "pass",
+  "confidence": {
+    "value": 0.94,
+    "band": "high",
+    "basis": "Composite of all six weighted components; no override triggered.",
+    "source": "calibrated"
+  },
+  "result": {
+    "component_breakdown": {
+      "context_completeness": 15,
+      "parity_f1": 24,
+      "semantic_agreement": 20,
+      "blind_spot_coverage": 20,
+      "recall_floor": 9.2,
+      "review_status": 6
+    },
+    "composite": 94.2,
+    "band": "High",
+    "override_applied": null
+  },
+  "evidence_refs": ["rule:RULE-0001"],
+  "gaps": []
+}
+```
 
 See `REFERENCE.md` for the full weighting table and the reasoning behind each override.

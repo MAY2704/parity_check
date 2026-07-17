@@ -1,6 +1,6 @@
 ---
 name: ai-semantic-validation
-version: 1.0.0
+version: 2.0.0
 description: >
   Uses an independent AI reading of the artifact under test to decipher
   what business logic it actually implements, then cross-checks that
@@ -16,9 +16,11 @@ inputs:
   - parity_result: output of parity-evaluation for this module
 depends_on: [knowledge-graph-builder, parity-evaluation]
 outputs:
-  - independent_description: the AI's own account of what the logic does, produced before reading the documented rule
-  - agreement_level: aligned / partially-aligned / contradicts
-  - coincidental_match_risk: boolean — true if numeric parity is high but semantic agreement is low
+  - JSON message per context/schemas/skill-message.schema.json — this is the
+    ONLY skill in the framework whose confidence.source is "self-reported"
+    rather than "calibrated"; see skills/SKILL_MESSAGES.md for why that
+    distinction is enforced rather than cosmetic
+output_schema: ../../context/schemas/skill-message.schema.json
 reference: REFERENCE.md
 ---
 
@@ -35,5 +37,33 @@ Rule-based checks (heuristic-validation, parity-evaluation) answer "does the out
 3. **Cross-reference against parity-evaluation's result.** This is the step that catches the dangerous case: **high numeric match rate + `partially-aligned` or `contradicts` semantic agreement = `coincidental_match_risk: true`.** Report this explicitly and prominently — it is a more serious finding than a low match rate alone, because it means the existing tests are not actually exercising the artifact's real behavior.
 4. **Name the specific divergence**, don't just flag disagreement. "Implements the rule for standard accounts but has no branch for the fee-waiver exception the rule requires" is actionable; "logic seems different" is not.
 5. **This skill's judgment is evidence, not a verdict.** It never overrides a human reviewer and never gets averaged away by a good parity score — see `confidence-scoring`'s override rule for how this is enforced.
+6. **Report `confidence.source: "self-reported"` on every message, always** — never mark this skill's confidence as `calibrated`. That label is what tells `confidence-scoring` this number can lower a composite score but must never be the reason one goes up. See `skills/SKILL_MESSAGES.md` for the full propagation rule.
+
+## Output message
+
+```json
+{
+  "skill": "ai-semantic-validation",
+  "skill_version": "2.0.0",
+  "module": "fee-waiver",
+  "run_id": "run-2026-07-17T09:41:00Z-fee-waiver",
+  "timestamp": "2026-07-17T09:44:18Z",
+  "status": "pass",
+  "confidence": {
+    "value": 0.55,
+    "band": "medium",
+    "basis": "Blind read was straightforward for the main branch but the artifact's exception-path logic was sparse; moderate confidence in completeness of the independent description.",
+    "source": "self-reported"
+  },
+  "result": {
+    "independent_description": "Returns a fixed waiver flag for a hard-coded list of six account IDs; no date or balance calculation present.",
+    "agreement_level": "contradicts",
+    "coincidental_match_risk": true,
+    "divergence_notes": ["Documented rule requires a 90-consecutive-day balance check; no such logic exists in the artifact."]
+  },
+  "evidence_refs": ["rule:RULE-0002"],
+  "gaps": ["No rule-engine oracle exists yet to cross-check this finding analytically."]
+}
+```
 
 See `REFERENCE.md` for the blind-read methodology, a worked example of a caught coincidental match, and known false-agreement traps.

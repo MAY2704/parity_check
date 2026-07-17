@@ -1,6 +1,6 @@
 ---
 name: legacy-rule-extraction
-version: 1.1.0
+version: 2.0.0
 description: >
   Parses legacy source (COBOL, JCL, copybooks, and similar) using rule-based
   pattern matching and regular expressions to draft candidate business
@@ -10,10 +10,10 @@ description: >
 inputs:
   - legacy_source_path: one module or file under context/legacy-source/
 outputs:
-  - candidate_rule: draft rule (description, source location, suspected
-    tolerance, suspected data fields), status = unverified
+  - JSON message per context/schemas/skill-message.schema.json
 requires_human_review: true
 depends_on: []
+output_schema: ../../context/schemas/skill-message.schema.json
 reference: REFERENCE.md
 ---
 
@@ -34,5 +34,37 @@ Reads a legacy module and drafts candidate business-rule descriptions using dete
 
 - A paragraph has no matching pattern at all but is clearly doing calculation (e.g., inline arithmetic without a `COMPUTE` verb) — the catalog has a gap, don't force a match.
 - Two patterns overlap on the same lines with conflicting interpretations.
+
+## Output message
+
+Every run emits one JSON message per `context/schemas/skill-message.schema.json`. Confidence here is always `calibrated` and capped moderate at best — a regex match is deterministic, but a *candidate* rule is unverified by definition until a human confirms it:
+
+```json
+{
+  "skill": "legacy-rule-extraction",
+  "skill_version": "2.0.0",
+  "module": "interest-accrual",
+  "run_id": "run-2026-07-17T09:40:00Z-interest-accrual",
+  "timestamp": "2026-07-17T09:40:11Z",
+  "status": "pass",
+  "confidence": {
+    "value": 0.6,
+    "band": "medium",
+    "basis": "Pattern match was unambiguous (single COMPUTE statement, no overlapping conditionals), but capped at medium because no candidate rule is confirmed until a human reviews it.",
+    "source": "calibrated"
+  },
+  "result": {
+    "candidate_rule": {
+      "description": "Simple interest accrual using a 360-day year convention",
+      "source": "INTCALC.CBL, paragraph 2100-CALC-INTEREST, line 210",
+      "suspected_fields": ["WS-PRINCIPAL", "WS-RATE", "WS-DAYS", "WS-ACCRUED-INT"],
+      "suspected_tolerance": null,
+      "status": "unverified"
+    }
+  },
+  "evidence_refs": [],
+  "gaps": ["suspected_tolerance requires domain SME input before this can become a BusinessRule node"]
+}
+```
 
 See `REFERENCE.md` for the full pattern catalog, COBOL-specific parsing notes (implied decimal points, sign handling, `PIC` clause interpretation), and worked examples.

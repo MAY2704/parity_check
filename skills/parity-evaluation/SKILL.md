@@ -1,6 +1,6 @@
 ---
 name: parity-evaluation
-version: 1.2.0
+version: 2.0.0
 description: >
   Normalizes and then compares the artifact under test's output against
   two independent oracles — the golden dataset (empirical) and the
@@ -13,9 +13,8 @@ inputs:
   - rule_engine_output: computed from context/rules-engine/{module}, if present
 depends_on: [heuristic-validation]
 outputs:
-  - discrepancy_list: classified as tolerance-acceptable / transformation-error / legacy-defect-now-fixed
-  - oracle_disagreement: cases where golden dataset and rule engine disagree with each other
-  - precision, recall, accuracy, f1
+  - JSON message per context/schemas/skill-message.schema.json
+output_schema: ../../context/schemas/skill-message.schema.json
 reference: REFERENCE.md
 ---
 
@@ -34,5 +33,36 @@ The core empirical/analytical comparison. Two stages, always in this order: norm
 5. **Classify every discrepancy**: `tolerance-acceptable`, `transformation-error`, or `legacy-defect-now-fixed`.
 6. **Compute precision, recall, accuracy, F1** at the module level, per the formulas and TP/FP/FN/TN definitions in `REFERENCE.md`. A rule with no oracle coverage contributes to recall as a hard zero, not as an excluded/unknown value.
 7. **Hand off to knowledge-graph-builder** to write the `ParityCheck` evidence node, and to `ai-semantic-validation` for the logic-level cross-check.
+
+## Output message
+
+Confidence here is `calibrated` from **oracle coverage**, not from the match rate — a perfect match against one oracle is weaker evidence than a good-but-imperfect match against two, and the basis field must say so explicitly:
+
+```json
+{
+  "skill": "parity-evaluation",
+  "skill_version": "2.0.0",
+  "module": "interest-accrual",
+  "run_id": "run-2026-07-17T09:41:00Z-interest-accrual",
+  "timestamp": "2026-07-17T09:43:50Z",
+  "status": "pass",
+  "confidence": {
+    "value": 0.9,
+    "band": "high",
+    "basis": "Both golden-dataset and rule-engine oracles present and in agreement with each other and with the artifact; all fields compared, no sampling.",
+    "source": "calibrated"
+  },
+  "result": {
+    "discrepancies": [],
+    "oracle_disagreement": [],
+    "precision": 1.0,
+    "recall": 0.92,
+    "accuracy": 0.97,
+    "f1": 0.96
+  },
+  "evidence_refs": ["rule:RULE-0001"],
+  "gaps": []
+}
+```
 
 See `REFERENCE.md` for the full normalization rule set and the precision/recall/accuracy/F1 definitions used across this framework.
