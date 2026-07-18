@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Read BEST_PRACTICES.md first
+    url: https://github.com/MAY2704/parity_check/blob/main/BEST_PRACTICES.md
+    about: The design rules behind this framework. Most "why does it work this way" questions are answered here.

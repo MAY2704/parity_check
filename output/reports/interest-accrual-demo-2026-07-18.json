@@ -1,0 +1,125 @@
+{
+  "run_id": "run-2026-07-18T00:00:00Z-interest-accrual-demo",
+  "module": "interest-accrual-demo",
+  "note": "SYNTHETIC DEMO RUN. See output/reports/interest-accrual-demo-2026-07-18.md for disclaimer. Not a real migration finding.",
+  "messages": [
+    {
+      "skill": "heuristic-validation",
+      "skill_version": "2.0.0",
+      "module": "interest-accrual-demo",
+      "run_id": "run-2026-07-18T00:00:00Z-interest-accrual-demo",
+      "timestamp": "2026-07-18T00:01:00Z",
+      "status": "pass",
+      "confidence": {
+        "value": 0.6,
+        "band": "medium",
+        "basis": "HCHK-DEMO-001 is brand new with no prior track record; cleared cleanly against all 5 synthetic cases this run, but a single clean run is weaker evidence than a heuristic with history.",
+        "source": "calibrated"
+      },
+      "result": {
+        "checks_run": ["HCHK-DEMO-001"],
+        "violated_bound": null
+      },
+      "evidence_refs": ["rule:RULE-DEMO-001", "rule:HCHK-DEMO-001"],
+      "gaps": []
+    },
+    {
+      "skill": "parity-evaluation",
+      "skill_version": "2.0.0",
+      "module": "interest-accrual-demo",
+      "run_id": "run-2026-07-18T00:00:00Z-interest-accrual-demo",
+      "timestamp": "2026-07-18T00:02:30Z",
+      "status": "pass",
+      "confidence": {
+        "value": 0.9,
+        "band": "high",
+        "basis": "Both golden-dataset and rule-engine oracles present and in agreement with each other and with the artifact; all 5 defined cases compared, no sampling.",
+        "source": "calibrated"
+      },
+      "result": {
+        "discrepancies": [],
+        "oracle_disagreement": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "accuracy": 1.0,
+        "f1": 1.0
+      },
+      "evidence_refs": ["rule:RULE-DEMO-001"],
+      "gaps": ["Golden dataset contains no case with days_elapsed > 45; parity coverage does not exercise the artifact's boundary behavior."]
+    },
+    {
+      "skill": "ai-semantic-validation",
+      "skill_version": "2.0.0",
+      "module": "interest-accrual-demo",
+      "run_id": "run-2026-07-18T00:00:00Z-interest-accrual-demo",
+      "timestamp": "2026-07-18T00:04:10Z",
+      "status": "pass",
+      "confidence": {
+        "value": 0.8,
+        "band": "high",
+        "basis": "Short, single-function artifact with an explicit, unambiguous cap; high confidence in the reading itself, independent of what it implies about correctness.",
+        "source": "self-reported"
+      },
+      "result": {
+        "independent_description": "Computes simple interest as principal times annual_rate times (min(days_elapsed, 45) / 360), rounded half-up to 2 decimals. The day-count factor is silently capped at 45 regardless of the true elapsed days, with no error, warning, or flag raised when the cap engages.",
+        "agreement_level": "partially-aligned",
+        "coincidental_match_risk": true,
+        "divergence_notes": [
+          "Documented rule (RULE-DEMO-001 / interest-accrual-demo.rules.yaml) defines no cap on days_elapsed; artifact silently caps the day-count factor at 45, understating interest on any accrual period longer than 45 days.",
+          "No golden-dataset or rule-engine case in this run has days_elapsed > 45, so the 100% parity match cannot detect this divergence."
+        ]
+      },
+      "evidence_refs": ["rule:RULE-DEMO-001"],
+      "gaps": []
+    },
+    {
+      "skill": "knowledge-graph-builder",
+      "skill_version": "2.0.0",
+      "module": "interest-accrual-demo",
+      "run_id": "run-2026-07-18T00:00:00Z-interest-accrual-demo",
+      "timestamp": "2026-07-18T00:05:00Z",
+      "status": "partial",
+      "confidence": {
+        "value": 0.7,
+        "band": "medium",
+        "basis": "TTL write completed with no constraint violations; Neo4j re-sync not executed because no live Neo4j instance is connected in this session.",
+        "source": "calibrated"
+      },
+      "result": {
+        "nodes_written": ["rule:PCHK-DEMO-001", "rule:ASEM-DEMO-001"],
+        "sync_status": "ttl_only_neo4j_not_synced"
+      },
+      "evidence_refs": ["rule:RULE-DEMO-001"],
+      "gaps": ["Neo4j graph (if any exists in this environment) is out of sync with knowledge-graph.ttl until context/neo4j/import.cypher is run against it."]
+    },
+    {
+      "skill": "confidence-scoring",
+      "skill_version": "2.0.0",
+      "module": "interest-accrual-demo",
+      "run_id": "run-2026-07-18T00:00:00Z-interest-accrual-demo",
+      "timestamp": "2026-07-18T00:05:30Z",
+      "status": "pass",
+      "confidence": {
+        "value": 0.55,
+        "band": "low",
+        "basis": "Weighted composite of 80.0 would land in Medium, but coincidental_match_risk: true from ai-semantic-validation overrides the band to Low regardless of the 100% parity match.",
+        "source": "calibrated"
+      },
+      "result": {
+        "component_breakdown": {
+          "context_completeness": 15.0,
+          "parity_f1": 25.0,
+          "semantic_agreement": 10.0,
+          "blind_spot_coverage": 20.0,
+          "recall_floor": 10.0,
+          "review_status": 0.0
+        },
+        "composite": 80.0,
+        "band": "Low",
+        "override_applied": "coincidental_match_risk: true (ai-semantic-validation); caps band at Low regardless of weighted composite"
+      },
+      "evidence_refs": ["rule:RULE-DEMO-001"],
+      "gaps": []
+    }
+  ]
+}

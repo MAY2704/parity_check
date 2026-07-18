@@ -1,0 +1,23 @@
+# interest-accrual-demo.rules.yaml
+#
+# SYNTHETIC DEMO. Duplicates RULE-0001's formula under a separate demo
+# rule (RULE-DEMO-001) so a full run-full-evaluation walkthrough doesn't
+# write over the already-verified production evidence for RULE-0001.
+# Not a real second production rule.
+
+rule_id: RULE-DEMO-001
+type: simple_interest_accrual
+convention: "30/360"
+inputs:
+  - principal
+  - annual_rate
+  - days_elapsed
+formula: "principal * annual_rate * (days_elapsed / 360)"
+rounding:
+  mode: half_up
+  decimal_places: 2
+bounds:
+  min: 0
+  max_ratio_of_principal: 0.15
+owner: "domain-sme:interest-calculations"
+last_reviewed: "2026-07-18"

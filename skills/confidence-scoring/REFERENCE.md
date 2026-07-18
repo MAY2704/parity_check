@@ -15,9 +15,11 @@
 
 ## Bands
 
-- **90–100 High** — eligible for sign-off / cutover track
-- **60–89 Medium** — targeted remediation required before sign-off
-- **< 60 Low** — not eligible; returns to remediation queue
+- **90–100 High**: eligible for sign-off / cutover track
+- **60–89 Medium**: targeted remediation required before sign-off
+- **< 60 Low**: not eligible; returns to remediation queue
+
+**Note on Review Status and first-pass runs:** `review_status` is worth 10% and scores 0 until a named human has signed off (see the table above). This means a module's very first evaluation, before any human has reviewed it, can score at most 90 even if the other five components are all perfect, capping it at the bottom edge of High rather than excluding it from High outright. This is intentional, not a bug: it reflects that a run with all evidence pointing to correctness still hasn't cleared the framework's human sign-off gate (`BEST_PRACTICES.md` §6). Don't read a first-pass 90 as "somehow made it to High without review." It means every other signal is clean and review is the only thing left.
 
 ## Override rules and why each one exists
 
@@ -26,16 +28,16 @@
 | Context Completeness = 0 | Nothing downstream is trustworthy if the agent never had the right rule in front of it to begin with |
 | Blind-Spot Coverage = 0 on a financial/regulatory rule | A module with zero coverage on money-moving logic cannot be Medium just because other modules pull the average up |
 | Recall Floor = 0 | Perfect precision on a module that's barely been checked is not evidence of correctness, it's evidence of not looking |
-| `coincidental_match_risk: true` | This is the specific failure mode where every other number can look perfect — 100% parity match, full context, full blind-spot coverage — while the artifact doesn't actually implement the rule. If this override didn't exist, it would be the single easiest way for a bad artifact to score High. |
+| `coincidental_match_risk: true` | The specific failure mode where every other number can look perfect (100% parity match, full context, full blind-spot coverage) while the artifact doesn't actually implement the rule. Without this override, it would be the easiest way for a bad artifact to score High. |
 
-The last override is the one most worth remembering: **a 100% parity match rate is not sufficient evidence on its own, ever, in this framework.** It's necessary, not sufficient — semantic agreement is what turns a numeric match into a claim about correctness.
+The last override matters most: **a 100% parity match rate is not sufficient evidence on its own, ever, in this framework.** It's necessary, not sufficient. Semantic agreement is what turns a numeric match into a claim about correctness.
 
 ## Self-reported confidence is a downgrade-only input
 
-`ai-semantic-validation`'s message carries `confidence.source: "self-reported"` — the skill's own certainty in its blind read, not a formula over external evidence. This framework never lets that value push a score up. A high self-reported confidence attached to `agreement_level: aligned` earns exactly the 100 points the Semantic Agreement component already assigns for "aligned," no bonus on top. A *low* self-reported confidence attached to `contradicts` or `coincidentalMatchRisk: true` still triggers the full downgrade and the override — the skill being unsure of its own reading is not a reason to discount a red flag it raised. See `skills/SKILL_MESSAGES.md` for the general rule this follows across the framework.
+`ai-semantic-validation`'s message carries `confidence.source: "self-reported"`, the skill's own certainty in its blind read, not a formula over external evidence. This framework never lets that value push a score up. A high self-reported confidence attached to `agreement_level: aligned` earns exactly the 100 points the Semantic Agreement component already assigns for "aligned," no bonus on top. A *low* self-reported confidence attached to `contradicts` or `coincidentalMatchRisk: true` still triggers the full downgrade and the override. The skill being unsure of its own reading is not a reason to discount a red flag it raised. See `skills/SKILL_MESSAGES.md` for the general rule this follows across the framework.
 
 ## Versioning note for this skill
 
-- **PATCH** — a corrected weight typo, a clarified band boundary.
-- **MINOR** — a new override condition added, or a new component added without removing an existing one (requires reweighting, which is why this is MINOR not PATCH).
-- **MAJOR** — removal of a component, a change to what "High/Medium/Low" means, or a change to which overrides exist — any change that would make a previously-computed score not directly comparable to a new one.
+- **PATCH**: a corrected weight typo, a clarified band boundary.
+- **MINOR**: a new override condition added, or a new component added without removing an existing one (requires reweighting, which is why this is MINOR not PATCH).
+- **MAJOR**: removal of a component, a change to what "High/Medium/Low" means, or a change to which overrides exist. Any change that would make a previously-computed score not directly comparable to a new one.

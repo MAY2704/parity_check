@@ -2,10 +2,10 @@
 #
 # A deterministic, independently-maintained re-implementation of RULE-0001,
 # used as a second oracle alongside the golden dataset. It is NOT generated
-# or maintained by the same AI tooling that produces the target component —
-# that independence is the entire point. If the AI-generated component and
-# this rule-engine implementation agree, and both agree with the golden
-# dataset, confidence is earned from two directions instead of one.
+# or maintained by the same AI tooling that produces the target component;
+# that independence is what makes it a useful check. If the AI-generated
+# component and this rule-engine implementation agree, and both agree with
+# the golden dataset, confidence is earned from two directions instead of one.
 
 rule_id: RULE-0001
 type: simple_interest_accrual
@@ -20,6 +20,6 @@ rounding:
   decimal_places: 2
 bounds:
   min: 0
-  max_ratio_of_principal: 0.15   # sanity ceiling — mirrors HCHK-0001
+  max_ratio_of_principal: 0.15   # sanity ceiling, mirrors HCHK-0001
 owner: "domain-sme:interest-calculations"
 last_reviewed: "2026-07-01"

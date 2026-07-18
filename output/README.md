@@ -16,10 +16,10 @@ The full, human-readable output of a single evaluation: heuristic result, normal
 
 ## `reports/{module}-{date}.json`
 
-The machine-readable companion: every JSON message emitted by every skill during the run, in order, sharing one `run_id`, each carrying its own `confidence` (`value`/`band`/`basis`/`source`) per `context/schemas/skill-message.schema.json`. This is what lets a run be re-validated, diffed against a later run, or audited programmatically — the `.md` report is for a human to read, this file is for tooling to check.
+The machine-readable companion: every JSON message emitted by every skill during the run, in order, sharing one `run_id`, each carrying its own `confidence` (`value`/`band`/`basis`/`source`) per `context/schemas/skill-message.schema.json`. This is what lets a run be re-validated, diffed against a later run, or audited programmatically. The `.md` report is for a human to read; this file is for tooling to check.
 
 ## `evaluation-log.md`
 
-The audit trail. Every report also gets a compact entry appended here — this is the file a reviewer scans across many modules to see program-wide status, and it's what `confidence-scoring` reads `review_status` from. Never delete or edit prior entries; append only.
+The audit trail. Every report also gets a compact entry appended here. This is the file a reviewer scans across many modules to see program-wide status, and it's what `confidence-scoring` reads `review_status` from. Never delete or edit prior entries; append only.
 
-Nothing in `output/` is an input to another evaluation run — it's a record of what happened, not a source of truth the agent reads back from (that's what `context/` and the knowledge graph are for).
+Nothing in `output/` is an input to another evaluation run. It's a record of what happened, not a source of truth the agent reads back from (that's what `context/` and the knowledge graph are for).

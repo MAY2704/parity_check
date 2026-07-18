@@ -3,27 +3,8 @@ description: 'Run the full three-phase evaluation pipeline (read input, execute 
 
 ---
 
-Evaluate `${input:module}` end to end.
+Evaluate `${input:module}` end to end, following the three-phase pipeline defined in `.github/chatmodes/parity-auditor.chatmode.md`: Phase 1 (Read Input) locates the artifact and the graph node and reports the gap if either is missing or stale; Phase 2 (Execute Process) runs all six skills strictly in the order and with the stop conditions that file specifies, each emitting one JSON message per `context/schemas/skill-message.schema.json` tagged with a shared `run_id`; Phase 3 (Generate Output) writes the results.
 
-Generate a `run_id` for this evaluation before starting. Every skill invoked below must emit one JSON message matching `context/schemas/skill-message.schema.json`, tagged with this `run_id` — no skill hands off a plain-text summary instead of a message.
+Do not skip a phase, reorder Phase 2, or shortcut a stage because an earlier one looks like it obviously passed.
 
-**Phase 1 — Read Input**
-1. Load the artifact from `input/artifacts/${input:module}/`.
-2. Query `context/knowledge-graph.ttl` (via `context/neo4j/queries.cypher`, context-assembly query) for the matching `BusinessRule` node.
-3. If missing or stale, stop and report the gap as the result. Do not infer the rule.
-4. Report existing evidence coverage (heuristic check / rule-engine oracle / prior parity check / prior semantic check) before proceeding.
-
-**Phase 2 — Execute Process**
-5. Run `heuristic-validation`. Stop on a `block`-severity failure. Its message's `confidence.source` is `calibrated`.
-6. Run `parity-evaluation`: normalize, dual-compare against the golden dataset and the rule-engine oracle, classify discrepancies, compute precision/recall/accuracy/F1. `confidence.source` is `calibrated`, based on oracle coverage.
-7. Run `ai-semantic-validation`: independent blind read of the artifact's logic, compare against the documented rule and against the parity message, flag `coincidental_match_risk` explicitly if relevant. `confidence.source` is `self-reported` — always mark it as such.
-8. Run `knowledge-graph-builder` to write all evidence nodes back to the graph and re-sync Neo4j, consuming the messages from steps 5–7.
-9. Run `confidence-scoring` to compute the six-component score from every message in this `run_id`, applying overrides and the self-reported propagation rule — `coincidental_match_risk: true` caps the result at Low regardless of the numeric match rate.
-
-**Phase 3 — Generate Output**
-10. Write the full report to `output/reports/${input:module}-{date}.md`.
-11. Write the full JSON message chain for this `run_id` to `output/reports/${input:module}-{date}.json`.
-12. Append a compact entry to `output/evaluation-log.md`.
-13. Output: `PASS / FAIL / NEEDS-REVIEW — confidence {score}/100 ({band}) — precision {p} / recall {r} / accuracy {a} / F1 {f1}`.
-
-Do not skip a phase or run stages out of order, even if an earlier stage looks like it obviously passed.
+Write the report to `output/reports/${input:module}-{date}.md`, the full message chain to `output/reports/${input:module}-{date}.json`, append a compact entry to `output/evaluation-log.md`, and output: `PASS / FAIL / NEEDS-REVIEW — confidence {score}/100 ({band}) — precision {p} / recall {r} / accuracy {a} / F1 {f1}`.

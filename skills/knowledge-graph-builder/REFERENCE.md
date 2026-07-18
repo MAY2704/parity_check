@@ -12,11 +12,14 @@
 
 ## Example write-back triples
 
+Each write-back does two things: it creates the evidence node, and it links the `BusinessRule` to that node with the forward predicate (`hasParityCheck`, `hasAISemanticCheck`, and so on). The link edge points *from* the rule *to* the evidence, which is the direction the graph queries in `context/neo4j/queries.cypher` traverse. Writing only the node without the forward edge leaves the evidence unreachable from its rule.
+
 A completed AI-semantic-validation run, written by this skill:
 
 ```turtle
+rule:RULE-0001 mig:hasAISemanticCheck rule:ASEM-0001 .
+
 rule:ASEM-0001 a mig:AISemanticCheck ;
-    mig:forRule                rule:RULE-0001 ;
     mig:independentDescription "Computes accrued interest as principal times rate times a day-count fraction" ;
     mig:agreementLevel          "aligned" ;
     mig:coincidentalMatchRisk   false ;
@@ -26,8 +29,9 @@ rule:ASEM-0001 a mig:AISemanticCheck ;
 A completed parity-evaluation run:
 
 ```turtle
+rule:RULE-0001 mig:hasParityCheck rule:PCHK-0002 .
+
 rule:PCHK-0002 a mig:ParityCheck ;
-    mig:forRule           rule:RULE-0001 ;
     mig:comparedAgainst    "golden-dataset", "rule-engine" ;
     mig:matchRate            "1.0"^^xsd:decimal ;
     mig:discrepancyCount     0 ;
@@ -57,7 +61,7 @@ CALL n10s.graphconfig.init({handleVocabUris: "SHORTEN"});
 CALL n10s.rdf.import.fetch("file:///data/knowledge-graph.ttl", "Turtle");
 ```
 
-**Export (only if Neo4j was used as an editing surface for some workflow — TTL must stay authoritative):**
+**Export (only if Neo4j was used as an editing surface for some workflow; TTL must stay authoritative):**
 
 ```cypher
 CALL n10s.rdf.export.cypher(
@@ -66,10 +70,10 @@ CALL n10s.rdf.export.cypher(
 RETURN subject, predicate, object;
 ```
 
-Redirect the export output back into `context/knowledge-graph.ttl` and commit — never let Neo4j hold state that isn't reflected in git.
+Redirect the export output back into `context/knowledge-graph.ttl` and commit. Never let Neo4j hold state that isn't reflected in git.
 
 ## Versioning note for this skill
 
-- **PATCH** — a fix to a Cypher query, a corrected constraint, a typo in the ontology doc.
-- **MINOR** — a new node type or property added, backward-compatible with existing nodes (existing nodes remain valid without changes).
-- **MAJOR** — an existing property is renamed, removed, or its meaning changes — any change that would make an existing TTL file fail to import cleanly or import with different semantics.
+- **PATCH**: a fix to a Cypher query, a corrected constraint, a typo in the ontology doc.
+- **MINOR**: a new node type or property added, backward-compatible with existing nodes (existing nodes remain valid without changes).
+- **MAJOR**: an existing property is renamed, removed, or its meaning changes. Any change that would make an existing TTL file fail to import cleanly or import with different semantics.

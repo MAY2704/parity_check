@@ -12,6 +12,9 @@ FOR (h:HeuristicCheck) REQUIRE h.uri IS UNIQUE;
 CREATE CONSTRAINT semantic_uri_unique IF NOT EXISTS
 FOR (a:AISemanticCheck) REQUIRE a.uri IS UNIQUE;
 
+CREATE CONSTRAINT ruleengine_uri_unique IF NOT EXISTS
+FOR (e:RuleEngineImpl) REQUIRE e.uri IS UNIQUE;
+
 // Helpful for the context-assembly query, which filters by targetComponent
 CREATE INDEX rule_target_component IF NOT EXISTS
 FOR (r:BusinessRule) ON (r.targetComponent);

@@ -5,23 +5,23 @@
 # ---------------------------------------------------------------------------
 # Ontology notes
 #
-# mig:BusinessRule        — a single extracted legacy business rule
-# mig:HeuristicCheck       — a cheap, deterministic sanity check derived from
-#                            the rule (range, sign, sum-to-total, calendar validity)
-# mig:RuleEngineImpl       — an independent, deterministic re-implementation of
-#                            the rule, used as a second oracle alongside the
-#                            golden dataset (two disagreeing oracles is itself
-#                            a finding, not just a tie-breaker problem)
-# mig:ParityCheck          — result of comparing AI-generated output against
-#                            the golden dataset AND/OR the rule-engine oracle.
-#                            Carries hasPrecision / hasRecall / hasAccuracy / hasF1.
-# mig:AISemanticCheck      — result of an independent AI reading of the
-#                            artifact's actual logic, compared against this
-#                            rule's description and against the ParityCheck
-#                            result. agreementLevel: aligned / partially-aligned
-#                            / contradicts. coincidentalMatchRisk: true when a
-#                            high match rate coexists with low semantic agreement
-#                            — this is what a numeric diff alone cannot catch.
+# mig:BusinessRule         a single extracted legacy business rule
+# mig:HeuristicCheck       a cheap, deterministic sanity check derived from
+#                          the rule (range, sign, sum-to-total, calendar validity)
+# mig:RuleEngineImpl       an independent, deterministic re-implementation of
+#                          the rule, used as a second oracle alongside the
+#                          golden dataset (two disagreeing oracles is itself
+#                          a finding, not just a tie-breaker problem)
+# mig:ParityCheck          result of comparing AI-generated output against
+#                          the golden dataset AND/OR the rule-engine oracle.
+#                          Carries hasPrecision / hasRecall / hasAccuracy / hasF1.
+# mig:AISemanticCheck      result of an independent AI reading of the
+#                          artifact's actual logic, compared against this
+#                          rule's description and against the ParityCheck
+#                          result. agreementLevel: aligned / partially-aligned
+#                          / contradicts. coincidentalMatchRisk: true when a
+#                          high match rate coexists with low semantic agreement,
+#                          the case a numeric diff alone cannot catch.
 # ---------------------------------------------------------------------------
 
 rule:RULE-0001 a mig:BusinessRule ;
@@ -31,7 +31,6 @@ rule:RULE-0001 a mig:BusinessRule ;
     mig:tolerance           "0.005"^^xsd:decimal ;
     mig:hasHeuristicCheck   rule:HCHK-0001 ;
     mig:hasRuleEngineImpl   rule:RENG-0001 ;
-    mig:hasTest              rule:TEST-0001 ;
     mig:hasParityCheck       rule:PCHK-0001 ;
     mig:hasAISemanticCheck    rule:ASEM-0001 ;
     mig:lastVerified          "2026-07-16"^^xsd:date ;
@@ -43,8 +42,8 @@ rule:RULE-0002 a mig:BusinessRule ;
     mig:targetComponent     "fee-waiver.rules.ts" ;
     mig:tolerance            "0"^^xsd:decimal ;
     mig:status                "BlindSpot" .
-    # no HeuristicCheck, no RuleEngineImpl, no ParityCheck, no AISemanticCheck —
-    # this rule has undefined recall: nothing has ever been checked against it
+    # no HeuristicCheck, no RuleEngineImpl, no ParityCheck, no AISemanticCheck.
+    # This rule has undefined recall: nothing has ever been checked against it.
 
 rule:HCHK-0001 a mig:HeuristicCheck ;
     mig:heuristicType    "range" ;
@@ -70,3 +69,52 @@ rule:ASEM-0001 a mig:AISemanticCheck ;
     mig:agreementLevel          "aligned" ;
     mig:coincidentalMatchRisk    false ;
     mig:executedOn                 "2026-07-16"^^xsd:date .
+
+# ---------------------------------------------------------------------------
+# SYNTHETIC DEMO DATA, added 2026-07-18 to walk the run-full-evaluation
+# pipeline end to end without touching RULE-0001's real verified evidence.
+# RULE-DEMO-001 is operator-confirmed for this demo only; it has not gone
+# through the standard legacy-rule-extraction + human-review flow that a
+# real BusinessRule node requires (see knowledge-graph-builder/SKILL.md
+# step 1). Do not treat this block as production evidence.
+# ---------------------------------------------------------------------------
+
+rule:RULE-DEMO-001 a mig:BusinessRule ;
+    mig:description       "Daily interest accrual, simple interest, 30/360 convention (demo duplicate of RULE-0001 for pipeline walkthrough)" ;
+    mig:sourceModule       "DEMO, no legacy source" ;
+    mig:targetComponent    "interest-accrual-demo.service.ts" ;
+    mig:tolerance           "0.005"^^xsd:decimal ;
+    mig:hasHeuristicCheck   rule:HCHK-DEMO-001 ;
+    mig:hasRuleEngineImpl   rule:RENG-DEMO-001 ;
+    mig:hasParityCheck       rule:PCHK-DEMO-001 ;
+    mig:hasAISemanticCheck    rule:ASEM-DEMO-001 ;
+    mig:lastVerified          "2026-07-18"^^xsd:date ;
+    mig:status                 "NeedsRemediation" .
+    # NeedsRemediation: coincidentalMatchRisk true on ASEM-DEMO-001.
+    # 100% parity match but semantic read found an undocumented day-count
+    # cap. See output/reports/interest-accrual-demo-2026-07-18.md.
+
+rule:HCHK-DEMO-001 a mig:HeuristicCheck ;
+    mig:heuristicType    "range" ;
+    mig:heuristicRule    "accrued_interest >= 0 AND accrued_interest <= principal * 0.15" ;
+    mig:severity           "block" .
+
+rule:RENG-DEMO-001 a mig:RuleEngineImpl ;
+    mig:implementationRef  "context/rules-engine/interest-accrual-demo.rules.yaml" ;
+    mig:deterministic         true .
+
+rule:PCHK-DEMO-001 a mig:ParityCheck ;
+    mig:comparedAgainst      "golden-dataset", "rule-engine" ;
+    mig:matchRate              "1.0"^^xsd:decimal ;
+    mig:discrepancyCount       0 ;
+    mig:hasPrecision            "1.0"^^xsd:decimal ;
+    mig:hasRecall                "1.0"^^xsd:decimal ;
+    mig:hasAccuracy               "1.0"^^xsd:decimal ;
+    mig:hasF1                      "1.0"^^xsd:decimal ;
+    mig:executedOn                  "2026-07-18"^^xsd:date .
+
+rule:ASEM-DEMO-001 a mig:AISemanticCheck ;
+    mig:independentDescription "Computes simple interest as principal times annual_rate times (min(days_elapsed, 45) / 360), rounded half-up to 2 decimals. The day-count factor is silently capped at 45 regardless of true elapsed days; no error, warning, or flag is raised when the cap engages." ;
+    mig:agreementLevel          "partially-aligned" ;
+    mig:coincidentalMatchRisk    true ;
+    mig:executedOn                 "2026-07-18"^^xsd:date .

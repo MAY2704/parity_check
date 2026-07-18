@@ -13,12 +13,12 @@
 
 ## Writing a new heuristic for an uncovered rule
 
-1. Ask a domain expert for the *cheapest possible* sanity bound on the rule's output — not the full rule logic, just "what would obviously be wrong."
+1. Ask a domain expert for the *cheapest possible* sanity bound on the rule's output, not the full rule logic, just "what would obviously be wrong."
 2. Prefer a bound that's robust to legitimate edge cases. A fee-waiver rule might legitimately produce a zero fee; don't write a heuristic that treats zero as always invalid.
-3. Default new heuristics to `severity: warn` until they've run clean against a batch of known-good historical output — promote to `block` only once false-positive rate is understood. A heuristic that blocks the pipeline on a false positive is worse than no heuristic at all, because it trains reviewers to override warnings without reading them.
+3. Default new heuristics to `severity: warn` until they've run clean against a batch of known-good historical output, and promote to `block` only once the false-positive rate is understood. A heuristic that blocks the pipeline on a false positive is worse than no heuristic at all, because it trains reviewers to override warnings without reading them.
 
 ## Versioning note for this skill
 
-- **PATCH** — a corrected threshold or expression for an existing heuristic.
-- **MINOR** — a new check type added to the catalog.
-- **MAJOR** — a change to how severity levels are interpreted, or a change that would alter pass/fail outcomes for existing heuristics without their expressions changing.
+- **PATCH**: a corrected threshold or expression for an existing heuristic.
+- **MINOR**: a new check type added to the catalog.
+- **MAJOR**: a change to how severity levels are interpreted, or a change that would alter pass/fail outcomes for existing heuristics without their expressions changing.

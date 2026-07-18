@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.org/migration/schemas/skill-message.schema.json",
   "title": "ParityKit Skill Message",
-  "description": "Canonical envelope every skill uses to hand off data during a single agent run — to the orchestrating agent and to whichever skill runs next. Every message carries an explicit, typed confidence indicator; no skill hands off a bare result.",
+  "description": "Canonical envelope every skill uses to hand off data during a single agent run, to the orchestrating agent and to whichever skill runs next. Every message carries an explicit, typed confidence indicator; no skill hands off a bare result.",
   "type": "object",
   "required": ["skill", "skill_version", "module", "run_id", "timestamp", "status", "confidence", "result"],
   "properties": {
@@ -17,7 +17,7 @@
     },
     "module": {
       "type": "string",
-      "description": "The targetComponent this message concerns — must match the input/artifacts subfolder and the knowledge-graph node."
+      "description": "The targetComponent this message concerns; must match the input/artifacts subfolder and the knowledge-graph node."
     },
     "run_id": {
       "type": "string",
@@ -27,7 +27,7 @@
     "status": {
       "type": "string",
       "enum": ["pass", "fail", "blocked", "partial", "not_run"],
-      "description": "'blocked' = a required upstream input was missing or stale, not a failure of this skill's own logic."
+      "description": "'blocked' means a required upstream input was missing or stale, not a failure of this skill's own logic."
     },
     "confidence": {
       "type": "object",
@@ -37,23 +37,23 @@
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "0.0-1.0. Not the final module confidence score — that's confidence-scoring's composite. This is how much THIS skill trusts its OWN output."
+          "description": "0.0-1.0. Not the final module confidence score; that's confidence-scoring's composite. This is how much THIS skill trusts its OWN output."
         },
         "band": { "type": "string", "enum": ["high", "medium", "low"] },
         "basis": {
           "type": "string",
-          "description": "Plain-language explanation of what this number reflects for this skill specifically — never a bare number with no basis."
+          "description": "Plain-language explanation of what this number reflects for this skill specifically. Never a bare number with no basis."
         },
         "source": {
           "type": "string",
           "enum": ["calibrated", "self-reported"],
-          "description": "calibrated = derived by formula from measured evidence (oracle coverage, sample size, prior run history). self-reported = a model's own assessment of its read (used only by ai-semantic-validation). Self-reported confidence must never be the reason a downstream score goes UP — see confidence-scoring/REFERENCE.md."
+          "description": "calibrated = derived by formula from measured evidence (oracle coverage, sample size, prior run history). self-reported = a model's own assessment of its read (used only by ai-semantic-validation). Self-reported confidence must never be the reason a downstream score goes UP; see confidence-scoring/REFERENCE.md."
         }
       }
     },
     "result": {
       "type": "object",
-      "description": "Skill-specific payload. Shape defined per skill in that skill's SKILL.md — see the 'Output message' example in each."
+      "description": "Skill-specific payload. Shape defined per skill in that skill's SKILL.md; see the 'Output message' example in each."
     },
     "evidence_refs": {
       "type": "array",
@@ -63,7 +63,7 @@
     "gaps": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Explicit missing-evidence, ambiguity, or coverage-gap notes. A skill with nothing to report here still includes an empty array — omitting the field is not the same as confirming there are no gaps."
+      "description": "Explicit missing-evidence, ambiguity, or coverage-gap notes. A skill with nothing to report here still includes an empty array; omitting the field is not the same as confirming there are no gaps."
     }
   }
 }

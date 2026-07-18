@@ -1,42 +1,48 @@
+// Relationship types below match the TTL predicate local-names exactly
+// (hasHeuristicCheck, hasRuleEngineImpl, hasParityCheck, hasAISemanticCheck),
+// which is what n10s produces on import with handleVocabUris: "SHORTEN".
+// The TTL is the source of truth; these names are derived from it, not chosen
+// independently. If you rename a predicate in the graph, update it here too.
+
 // ---------------------------------------------------------------------------
 // Blind spots: rules missing a heuristic check, rule-engine oracle, or
-// parity check. Any one missing edge is a finding on its own — nothing has
+// parity check. Any one missing edge is a finding on its own; nothing has
 // to look wrong for a gap to be real. (AISemanticCheck is deliberately not
-// part of the blind-spot definition — it can only run once a ParityCheck
+// part of the blind-spot definition: it can only run once a ParityCheck
 // exists, so its absence is downstream of the parity-check gap, not a
 // separate blind spot to report twice.)
 // ---------------------------------------------------------------------------
 MATCH (r:BusinessRule)
-WHERE NOT (r)-[:HAS_HEURISTIC_CHECK]->()
-   OR NOT (r)-[:HAS_RULE_ENGINE_IMPL]->()
-   OR NOT (r)-[:HAS_PARITY_CHECK]->()
+WHERE NOT (r)-[:hasHeuristicCheck]->()
+   OR NOT (r)-[:hasRuleEngineImpl]->()
+   OR NOT (r)-[:hasParityCheck]->()
 RETURN r.uri AS rule, r.description AS description, r.status AS status
 ORDER BY r.status DESC;
 
 // ---------------------------------------------------------------------------
 // Staleness: parity checks older than the freshness window. Different
-// problem from a blind spot — this rule WAS checked, just not recently.
+// problem from a blind spot: this rule WAS checked, just not recently.
 // ---------------------------------------------------------------------------
-MATCH (r:BusinessRule)-[:HAS_PARITY_CHECK]->(p:ParityCheck)
+MATCH (r:BusinessRule)-[:hasParityCheck]->(p:ParityCheck)
 WHERE date(p.executedOn) < date() - duration('P30D')
 RETURN r.uri AS rule, p.executedOn AS lastChecked;
 
 // ---------------------------------------------------------------------------
-// Context assembly: the one- or two-hop neighborhood for a single module —
-// this, not the full graph, is what gets serialized into model context.
+// Context assembly: the one- or two-hop neighborhood for a single module.
+// This, not the full graph, is what gets serialized into model context.
 // ---------------------------------------------------------------------------
 MATCH (r:BusinessRule {targetComponent: $module})-[rel]-(n)
 RETURN r, rel, n;
 
 // ---------------------------------------------------------------------------
 // Precision / recall / accuracy / F1 roll-up for a module. Precision comes
-// cheap — flag less, precision goes up. Recall is the number that costs
-// something to earn: a rule with no coverage contributes zero, not
-// "unknown" — undefined coverage is a recall failure, never excluded from
+// cheap: flag less, precision goes up. Recall is the number that costs
+// something to earn. A rule with no coverage contributes zero, not
+// "unknown"; undefined coverage is a recall failure, never excluded from
 // the average.
 // ---------------------------------------------------------------------------
 MATCH (r:BusinessRule {targetComponent: $module})
-OPTIONAL MATCH (r)-[:HAS_PARITY_CHECK]->(p:ParityCheck)
+OPTIONAL MATCH (r)-[:hasParityCheck]->(p:ParityCheck)
 RETURN
   r.uri AS rule,
   coalesce(p.hasPrecision, 0.0) AS precision,
@@ -47,12 +53,12 @@ RETURN
 
 // ---------------------------------------------------------------------------
 // Coincidental-match risk: modules with a high parity match rate but a
-// semantic agreement level that isn't "aligned". This is the query that
-// catches an artifact passing numerically without implementing the rule —
-// the single most important query in this file.
+// semantic agreement level that isn't "aligned". This query catches an
+// artifact passing numerically without implementing the rule, the most
+// load-bearing check in this file.
 // ---------------------------------------------------------------------------
-MATCH (r:BusinessRule)-[:HAS_PARITY_CHECK]->(p:ParityCheck)
-MATCH (r)-[:HAS_AI_SEMANTIC_CHECK]->(a:AISemanticCheck)
+MATCH (r:BusinessRule)-[:hasParityCheck]->(p:ParityCheck)
+MATCH (r)-[:hasAISemanticCheck]->(a:AISemanticCheck)
 WHERE p.matchRate >= 0.95 AND a.agreementLevel <> "aligned"
 RETURN r.uri AS rule, p.matchRate AS matchRate, a.agreementLevel AS agreementLevel,
        a.coincidentalMatchRisk AS flagged;
@@ -60,14 +66,14 @@ RETURN r.uri AS rule, p.matchRate AS matchRate, a.agreementLevel AS agreementLev
 // ---------------------------------------------------------------------------
 // Confidence-score inputs: aggregated straight from the graph so the score
 // is re-derivable by anyone with query access, not a black box. Review
-// Status is not graph-resident — pull it from output/evaluation-log.md
+// Status is not graph-resident; pull it from output/evaluation-log.md
 // separately and combine at the scoring step.
 // ---------------------------------------------------------------------------
 MATCH (r:BusinessRule {targetComponent: $module})
-OPTIONAL MATCH (r)-[:HAS_PARITY_CHECK]->(p:ParityCheck)
-OPTIONAL MATCH (r)-[:HAS_HEURISTIC_CHECK]->(h:HeuristicCheck)
-OPTIONAL MATCH (r)-[:HAS_RULE_ENGINE_IMPL]->(e:RuleEngineImpl)
-OPTIONAL MATCH (r)-[:HAS_AI_SEMANTIC_CHECK]->(a:AISemanticCheck)
+OPTIONAL MATCH (r)-[:hasParityCheck]->(p:ParityCheck)
+OPTIONAL MATCH (r)-[:hasHeuristicCheck]->(h:HeuristicCheck)
+OPTIONAL MATCH (r)-[:hasRuleEngineImpl]->(e:RuleEngineImpl)
+OPTIONAL MATCH (r)-[:hasAISemanticCheck]->(a:AISemanticCheck)
 RETURN
   r.uri AS rule,
   CASE WHEN p IS NULL THEN 0 ELSE p.hasF1 END       AS parityF1,
