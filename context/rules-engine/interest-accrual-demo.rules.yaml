@@ -13,11 +13,48 @@ inputs:
   - annual_rate
   - days_elapsed
 formula: "principal * annual_rate * (days_elapsed / 360)"
+output_fields:
+  - name: accrued_interest
+    golden_field: expected_accrued_interest
 rounding:
   mode: half_up
   decimal_places: 2
 bounds:
   min: 0
   max_ratio_of_principal: 0.15
+
+# Declared input domains: what scripts/parity_eval.py fuzzes and generates
+# boundary cases over. Boundary values come from the documented rule (day-count
+# convention edges), never from suspected artifact behavior.
+input_domains:
+  principal:
+    min: 0
+    max: 1000000
+  annual_rate:
+    min: 0
+    max: 0.25
+  days_elapsed:
+    min: 0
+    max: 3650
+    integer: true
+    boundary_values: [0, 1, 30, 31, 90, 180, 359, 360, 361]
+
+# Metamorphic properties of the documented rule, checked against the artifact
+# by scripts/parity_eval.py. These need no oracle values at all, so they hold
+# even where the golden dataset has no coverage.
+properties:
+  - type: monotonic_nondecreasing
+    over: days_elapsed
+  - type: linear_in
+    over: days_elapsed
+  - type: linear_in
+    over: principal
+  - type: zero_when
+    input: annual_rate
+    value: 0
+
+adequacy:
+  target_case_count: 50
+
 owner: "domain-sme:interest-calculations"
-last_reviewed: "2026-07-18"
+last_reviewed: "2026-07-20"

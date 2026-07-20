@@ -15,11 +15,44 @@ inputs:
   - annual_rate
   - days_elapsed
 formula: "principal * annual_rate * (days_elapsed / 360)"
+output_fields:
+  - name: accrued_interest
+    golden_field: expected_accrued_interest
 rounding:
   mode: half_up
   decimal_places: 2
 bounds:
   min: 0
   max_ratio_of_principal: 0.15   # sanity ceiling, mirrors HCHK-0001
+
+# Fuzz/boundary domains and metamorphic properties for scripts/parity_eval.py.
+# Boundary values are derived from the documented 30/360 day-count convention.
+input_domains:
+  principal:
+    min: 0
+    max: 1000000
+  annual_rate:
+    min: 0
+    max: 0.25
+  days_elapsed:
+    min: 0
+    max: 3650
+    integer: true
+    boundary_values: [0, 1, 30, 31, 90, 180, 359, 360, 361]
+
+properties:
+  - type: monotonic_nondecreasing
+    over: days_elapsed
+  - type: linear_in
+    over: days_elapsed
+  - type: linear_in
+    over: principal
+  - type: zero_when
+    input: annual_rate
+    value: 0
+
+adequacy:
+  target_case_count: 50
+
 owner: "domain-sme:interest-calculations"
 last_reviewed: "2026-07-01"

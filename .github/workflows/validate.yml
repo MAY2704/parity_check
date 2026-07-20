@@ -12,5 +12,32 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - run: pip install -r scripts/requirements.txt
       - run: python scripts/validate_skills.py
+      - run: python scripts/test_parity_eval.py
+      # Regression guard for the whole detection pipeline: the demo artifact
+      # carries a deliberately planted divergence (45-day cap) that the golden
+      # dataset cannot see. The harness MUST fail this run (exit 1) via
+      # differential fuzzing / property checks; a pass means detection broke.
+      - name: parity harness catches the planted demo divergence
+        run: |
+          set +e
+          python scripts/parity_eval.py interest-accrual-demo --fuzz 200 --seed 1337 --out /tmp/demo-msg.json > /dev/null
+          code=$?
+          set -e
+          if [ "$code" -ne 1 ]; then
+            echo "expected exit 1 (planted divergence caught), got $code"; exit 1
+          fi
+          python - <<'EOF'
+          import json
+          msg = json.load(open("/tmp/demo-msg.json"))
+          fuzz = msg["result"]["differential_fuzz"]
+          assert msg["status"] == "fail", msg["status"]
+          assert fuzz and fuzz["divergence_count"] > 0, "fuzz found no divergence"
+          assert any(p["status"] == "fail" for p in msg["result"]["property_checks"]), \
+              "no property check caught the cap"
+          print(f"caught: {fuzz['divergence_count']}/{fuzz['cases_run']} fuzz divergences")
+          EOF

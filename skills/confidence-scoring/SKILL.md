@@ -1,6 +1,6 @@
 ---
 name: confidence-scoring
-version: 2.0.0
+version: 2.1.0
 description: >
   Aggregates evidence from every other skill's JSON message into a single,
   transparent confidence score with a visible component breakdown, never a
@@ -31,7 +31,7 @@ Arithmetic over evidence, not a model and not a judgment call. Every input to th
 ## Procedure
 
 1. Pull the JSON message most recently logged for the module from each source skill. Never estimate a component with no logged message behind it.
-2. Apply the weights in `REFERENCE.md` to compute the weighted composite from each message's `result` fields.
+2. Apply the weights in `REFERENCE.md` to compute the weighted composite from each message's `result` fields. If `parity-evaluation` reports null metrics (a degenerate clean run — see its `REFERENCE.md`), apply the null-metric fallbacks in `REFERENCE.md` §"Null-metric fallbacks"; never substitute 1.0 for a null.
 3. **Enforce the propagation rule** (full rationale: `REFERENCE.md` §"Self-reported confidence is a downgrade-only input"). `aligned` adds no bonus beyond what Semantic Agreement already scores; `partially-aligned`, `contradicts`, or `coincidental_match_risk: true` triggers the full downgrade regardless of the self-reported confidence value attached.
 4. **Check the four override conditions in `REFERENCE.md`** before finalizing. Any one caps the composite at Low regardless of the weighted total, even at 100% parity accuracy.
 5. Report all six components individually, the override applied (if any), the composite, and the band, as a JSON message per the schema, plus a human-readable rendering for the report. Never output a single number with no breakdown.
@@ -42,7 +42,7 @@ Arithmetic over evidence, not a model and not a judgment call. Every input to th
 ```json
 {
   "skill": "confidence-scoring",
-  "skill_version": "2.0.0",
+  "skill_version": "2.1.0",
   "module": "interest-accrual",
   "run_id": "run-2026-07-17T09:41:00Z-interest-accrual",
   "timestamp": "2026-07-17T09:45:00Z",

@@ -4,6 +4,21 @@ All notable changes to ParityKit are recorded here. Format follows [Keep a Chang
 
 Individual skill versions move independently and are tracked in `SKILLS_CHANGELOG.md`. This file records the framework as a whole: structure, tooling, and the version stamped in `VERSION`.
 
+## [Unreleased]
+
+### Added
+- `scripts/parity_eval.py`: a deterministic parity harness that executes the artifact (via a per-module `input/artifacts/{module}/harness.mjs` and `scripts/run_artifact.mjs`), normalizes all sides, dual-compares against the golden dataset and rule-engine oracles, and emits the `parity-evaluation` skill message. The core comparison is now re-runnable arithmetic, not model-followed prose.
+- Differential fuzzing and boundary-case generation against the rule-engine oracle over declared `input_domains` (seeded, reproducible), plus metamorphic `properties` checks (`monotonic_nondecreasing`, `linear_in`, `zero_when`) that need no oracle values at all. In the demo module these catch the planted 45-day cap numerically (531/551 fuzz cases divergent; linearity-in-days violated) despite a 100% golden match.
+- Golden-dataset adequacy scoring (volume, input-range coverage, boundary coverage, declared `provenance`), reported per run and priced into the calibrated confidence.
+- `scripts/test_parity_eval.py` (run in CI), and a CI regression guard asserting the demo module's planted divergence is caught.
+
+### Changed
+- `parity-evaluation` 2.0.0 → 3.0.0 (MAJOR): unit of analysis pinned to field-per-case; degenerate metrics (zero denominators) now report null instead of a fabricated 1.0; run-time recall counts only known misses and is recomputed as escaped defects are recorded in `review.json`. `confidence-scoring` 2.0.0 → 2.1.0 (MINOR): null-metric fallbacks. See `SKILLS_CHANGELOG.md`.
+- Rule configs (`context/rules-engine/*.rules.yaml`) gained `output_fields`, `input_domains`, `properties`, and `adequacy`; golden datasets declare `provenance`.
+
+### Fixed
+- The demo report's precision/recall/F1 of 1.0 on a run that flagged nothing was undefined arithmetic (0/0); the harness and the v3 metric conventions make that impossible to reproduce.
+
 ## [3.0.0] - 2026-07-18
 
 ### Added

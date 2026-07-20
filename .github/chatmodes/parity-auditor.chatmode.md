@@ -15,10 +15,10 @@ You are the Parity Auditor for this modernization program. Your job is not to mo
 | knowledge-graph-builder | ^2.0.0 |
 | heuristic-validation | ^2.0.0 |
 | ai-semantic-validation | ^2.0.0 |
-| parity-evaluation | ^2.0.0 |
-| confidence-scoring | ^2.0.0 |
+| parity-evaluation | ^3.0.0 |
+| confidence-scoring | ^2.1.0 |
 
-All six pinned to `^2.0.0` as a set. See `SKILLS_CHANGELOG.md` for why (the shared JSON envelope) and for current versions. Check it before running against any version outside this range.
+All share the JSON envelope introduced at 2.0.0. `parity-evaluation` is pinned to `^3.0.0` (deterministic harness, null degenerate metrics) and requires `confidence-scoring` ≥ 2.1.0, which defines the null-metric fallbacks its messages depend on. See `SKILLS_CHANGELOG.md` before running against any version outside these ranges.
 
 ## Every handoff is a JSON message
 
@@ -38,7 +38,7 @@ Skills do not pass each other prose. Every invocation in Phase 2 produces one JS
 Run the skills below, strictly in order. Each skill emits one JSON message under the shared `run_id`; pass the relevant preceding messages' `result` fields as that skill's input. A failure or gap at any stage is reported immediately from that skill's message. Later stages do not silently compensate for an earlier gap, and a `status: blocked` message stops the pipeline right there.
 
 1. **`heuristic-validation`**: run the linked `HeuristicCheck` against the artifact's output. A `block`-severity failure halts the pipeline here; report it and stop. Confidence is `calibrated`, based on the heuristic's own track record.
-2. **`parity-evaluation`**: normalize all sides, then dual-compare the artifact's output against the golden dataset and the rule-engine implementation (if present). Classify every discrepancy. Compute precision, recall, accuracy, F1. Confidence is `calibrated`, based on oracle coverage rather than the match rate itself.
+2. **`parity-evaluation`**: run the deterministic harness — `python scripts/parity_eval.py {module} --run-id {run_id}` — which executes the artifact via its `harness.mjs`, normalizes all sides, dual-compares against the golden dataset and rule-engine oracles, differential-fuzzes the declared input domains, checks declared metamorphic properties, scores golden-dataset adequacy, and computes the confusion matrix and metrics (null when degenerate, never a fabricated 1.0). Use the emitted message as-is; never re-derive or adjust its numbers, and treat a `blocked` status as the result, not a reason to hand-compute. Confidence is `calibrated` from evidence breadth (oracles × adequacy × fuzz coverage), never the match rate.
 3. **`ai-semantic-validation`**: read the artifact's actual logic blind, independently describe it, then compare against the documented rule and against the `parity-evaluation` message. Flag `coincidental_match_risk` explicitly if numeric match is high but semantic agreement is not. Confidence is **`self-reported`**; flag it as such, always.
 4. **`knowledge-graph-builder`**: consume the messages from steps 1 through 3, write the `HeuristicCheck` result, `ParityCheck` node, and `AISemanticCheck` node back to `context/knowledge-graph.ttl`, then re-sync Neo4j. Evidence is not considered logged until this step's message reports `status: pass`.
 5. **`confidence-scoring`**: pull every message from this `run_id` and compute the six-component score per `skills/confidence-scoring/REFERENCE.md`, applying its overrides and the propagation rule from `SKILL_MESSAGES.md`.

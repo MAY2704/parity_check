@@ -1,5 +1,6 @@
 {
   "_note": "SYNTHETIC DEMO golden dataset for RULE-DEMO-001 pipeline walkthrough. Not real historical data.",
+  "provenance": "synthetic",
   "cases": [
     { "principal": 10000, "annual_rate": 0.05,  "days_elapsed": 30, "expected_accrued_interest": 41.67 },
     { "principal": 25000, "annual_rate": 0.04,  "days_elapsed": 15, "expected_accrued_interest": 41.67 },

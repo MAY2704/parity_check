@@ -26,7 +26,7 @@ flowchart TD
     M -->|Remediate| B
 ```
 
-`parity-evaluation` compares the artifact against two independent oracles: the **golden dataset** (empirical) and the **rule-engine implementation** (analytical, maintained separately). `ai-semantic-validation` checks something neither oracle can: whether the artifact's actual *logic*, read independently and blind, matches the documented rule. A numeric match only proves agreement on the cases tested.
+`parity-evaluation` compares the artifact against two independent oracles: the **golden dataset** (empirical) and the **rule-engine implementation** (analytical, maintained separately). Since 3.0.0 that comparison is executed by a deterministic harness (`scripts/parity_eval.py`), which also **differential-fuzzes** the artifact against the rule engine across the rule's declared input domains and checks declared **metamorphic properties** — so a divergence outside the golden dataset's coverage is caught numerically, not just by the AI read. `ai-semantic-validation` still checks something no numeric layer can: whether the artifact's actual *logic*, read independently and blind, matches the documented rule. A numeric match only proves agreement on the cases tested.
 
 ## Skill messages
 
@@ -47,8 +47,8 @@ Each skill is a folder with a versioned `SKILL.md` (frontmatter contract, proced
 | `knowledge-graph-builder` | 2.0.0 | Only skill that writes to the graph; TTL in git, synced to Neo4j | calibrated |
 | `heuristic-validation` | 2.0.0 | Cheap deterministic sanity checks, run first, can halt the pipeline | calibrated |
 | `ai-semantic-validation` | 2.0.0 | Independent AI read of the artifact's logic, cross-checked against the rule and the parity result | **self-reported** |
-| `parity-evaluation` | 2.0.0 | Normalize, then dual-compare against both oracles; computes precision/recall/accuracy/F1 | calibrated |
-| `confidence-scoring` | 2.0.0 | Six-component weighted score with hard overrides; enforces the self-reported propagation rule | calibrated |
+| `parity-evaluation` | 3.0.0 | Deterministic harness (`scripts/parity_eval.py`): normalize, dual-compare, differential-fuzz, property checks, dataset adequacy, confusion-matrix metrics | calibrated |
+| `confidence-scoring` | 2.1.0 | Six-component weighted score with hard overrides; enforces the self-reported propagation rule and the null-metric fallbacks | calibrated |
 
 ## Folder structure
 
@@ -68,6 +68,9 @@ Each skill is a folder with a versioned `SKILL.md` (frontmatter contract, proced
     validate.yml                    # CI: runs scripts/validate_skills.py on push/PR
 scripts/
   validate_skills.py                # version + schema validator (also run locally)
+  parity_eval.py                    # deterministic parity harness: compare, fuzz, properties, adequacy, metrics
+  test_parity_eval.py               # unit tests for the harness (run in CI)
+  run_artifact.mjs                  # generic node runner for input/artifacts/{module}/harness.mjs
   requirements.txt
 skills/
   SKILL_MESSAGES.md                 # the shared JSON envelope, explained
@@ -79,7 +82,7 @@ skills/
   confidence-scoring/{SKILL.md, REFERENCE.md}
 input/
   README.md
-  artifacts/{module}/            # <- drop the artifact under test here
+  artifacts/{module}/            # <- artifact under test + its harness.mjs (execution adapter)
 output/
   README.md
   reports/{module}-{date}.md     # <- generated human-readable test report
@@ -123,8 +126,8 @@ Four conditions cap the score at Low regardless of the weighted total: missing c
 1. Copy this folder into your repo. Chat modes appear in Copilot's mode dropdown once `.github/chatmodes/` exists.
 2. Populate `context/knowledge-graph.ttl` with your first human-confirmed rules (via `legacy-rule-extraction` and manual review), then load into Neo4j with `context/neo4j/schema.cypher` followed by `import.cypher`.
 3. Add a golden dataset and, where a rule is well understood, a rule-engine implementation under `context/`. A rule with only one oracle is weaker evidence than one with two, and the framework reports that.
-4. Drop the artifact under test into `input/artifacts/{module}/`.
-5. Run `*run-full-evaluation {module}`. The Parity Auditor walks all three phases and all six skills, and writes the full JSON message chain automatically.
+4. Drop the artifact under test into `input/artifacts/{module}/`, with a `harness.mjs` mapping named case inputs onto the artifact's call signature (see `input/README.md`). Declare `output_fields`, `input_domains`, and `properties` on the rule config so fuzzing and property checks have something to work with, and a `provenance` on the golden dataset.
+5. Run `*run-full-evaluation {module}`. The Parity Auditor walks all three phases and all six skills — the parity step runs `python scripts/parity_eval.py {module}` (Python 3.10+; node ≥ 22.6 for artifact execution) — and writes the full JSON message chain automatically.
 6. Check `output/reports/` for the full report and `output/evaluation-log.md` before any sign-off conversation.
 7. Periodically run `*scan-blindspots {scope}` in Blind-Spot Scout mode, even on modules that just passed. Passing and covered are different claims.
 
