@@ -1,5 +1,8 @@
 # ParityKit
 
+<img width="973" height="728" alt="image" src="https://github.com/user-attachments/assets/41949ceb-81b2-4ede-ab70-d50b09cb4c66" />
+
+
 An agent + skills framework for evaluating AI-generated artifacts in legacy modernization work. One orchestrating agent reads an artifact under test, runs it through a versioned skills library, and generates a test report with a transparent confidence score: precision, recall, accuracy, and F1 included, never a bare number.
 
 **Version 3.0.0.** Every inter-skill handoff is a typed JSON message with an explicit confidence indicator. See "Skill messages" below.
